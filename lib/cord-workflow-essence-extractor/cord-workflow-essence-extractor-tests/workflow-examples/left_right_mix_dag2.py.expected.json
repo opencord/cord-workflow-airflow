@@ -1,0 +1,100 @@
+{
+    "att_workflow_onu": {
+        "dag": {
+            "dag_id": "att_workflow_onu",
+            "local_variable": "dag_att"
+        },
+        "dependencies": {
+            "auth_event_handler": {
+                "children": [
+                    "onu_model_event_handler"
+                ]
+            },
+            "onu_event_handler": {
+                "children": [
+                    "onu_model_event_handler"
+                ]
+            },
+            "onu_model_event_handler": {
+                "parents": [
+                    "onu_event_handler",
+                    "auth_event_handler"
+                ]
+            }
+        },
+        "tasks": {
+            "auth_event_handler": {
+                "class": "XOSEventSensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "auth_event_handler",
+                "poke_interval": 5,
+                "provide_context": true,
+                "python_callable": "Auth_event",
+                "task_id": "auth_event_handler",
+                "topic": "authentication.events"
+            },
+            "auth_model_event_handler": {
+                "class": "XOSModelSensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "auth_model_event_handler",
+                "model_name": "AttWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "provide_context": true,
+                "python_callable": "DriverService_event",
+                "task_id": "auth_model_event_handler"
+            },
+            "dhcp_event_handler": {
+                "class": "XOSEventSensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "dhcp_event_handler",
+                "poke_interval": 5,
+                "provide_context": true,
+                "python_callable": "DHCP_event",
+                "task_id": "dhcp_event_handler",
+                "topic": "dhcp.events"
+            },
+            "dhcp_model_event_handler": {
+                "class": "XOSModelSensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "dhcp_model_event_handler",
+                "model_name": "AttWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "provide_context": true,
+                "python_callable": "DriverService_event",
+                "task_id": "dhcp_model_event_handler"
+            },
+            "onu_event_handler": {
+                "class": "XOSEventSensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "onu_event_handler",
+                "poke_interval": 5,
+                "provide_context": true,
+                "python_callable": "ONU_event",
+                "task_id": "onu_event_handler",
+                "topic": "onu.events"
+            },
+            "onu_model_event_handler": {
+                "class": "XOSModelSensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "onu_model_event_handler",
+                "model_name": "AttWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "provide_context": true,
+                "python_callable": "DriverService_event",
+                "task_id": "onu_model_event_handler"
+            }
+        }
+    }
+}

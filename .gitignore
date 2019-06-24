@@ -1,0 +1,12 @@
+.noseids
+.vscode
+build
+dist
+.coverage
+coverage.xml
+cover
+.tox
+.DS_Store
+nose2-results.xml
+venv-service
+*.pyc

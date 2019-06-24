@@ -1,0 +1,11 @@
+.noseids
+build
+cordworkflowessenceextractor.egg-info
+dist
+.coverage
+coverage.xml
+cover
+.DS_Store
+
+# setup.py copies this, don't commit it
+VERSION
