@@ -1,4 +1,4 @@
-# Copyright 2018-present Open Networking Foundation
+# Copyright 2019-present Open Networking Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,6 @@
 
 from __future__ import absolute_import
 
-import os
-from shutil import copyfile
-
 from setuptools import setup
 
 
@@ -26,10 +23,7 @@ def readme():
 
 
 def version():
-    # Copy VERSION file of parent to module directory if not found
-    if not os.path.exists("cordworkflowessenceextractor/VERSION"):
-        copyfile("../../VERSION", "cordworkflowessenceextractor/VERSION")
-    with open("cordworkflowessenceextractor/VERSION") as f:
+    with open("VERSION") as f:
         return f.read().strip()
 
 
@@ -43,15 +37,20 @@ def parse_requirements(filename):
 
 
 setup(
-    name="cordworkflowessenceextractor",
+    name="cord_workflow_airflow_extensions",
     version=version(),
-    description="Extract workflow essence from airflow workflow code",
+    description="Airflow extensions for CORD Workflow Manager",
     long_description=readme(),
     author="Illyoung Choi",
     author_email="iychoi@opennetworking.org",
     classifiers=["License :: OSI Approved :: Apache Software License"],
     license="Apache v2",
-    packages=["cordworkflowessenceextractor"],
+    packages=[
+        "cord_workflow_airflow_extensions"
+    ],
+    package_dir={
+        "cord_workflow_airflow_extensions": "src/cord_workflow_airflow_extensions"
+    },
     install_requires=parse_requirements("requirements.txt"),
     include_package_data=True,
 )

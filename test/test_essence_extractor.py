@@ -15,13 +15,14 @@
 from __future__ import absolute_import
 import unittest
 import json
-import cordworkflowessenceextractor.workflow_essence_extractor as extractor
-
 import os
 import collections
 
+from cord_workflow_airflow_extensions.essence_extractor import EssenceExtractor
+
+
 test_path = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-examples_dir = os.path.join(test_path, "workflow-examples")
+examples_dir = os.path.join(test_path, "workflow_examples")
 extension_expected_result = ".expected.json"
 
 try:
@@ -30,6 +31,7 @@ except NameError:
     basestring = str
 
 
+# convert unicode string object to plain string object
 def convert(data):
     if isinstance(data, basestring):
         return str(data)
@@ -47,10 +49,9 @@ def convert(data):
         return data
 
 
-class TestParse(unittest.TestCase):
-
+class TestEssenceExtractor(unittest.TestCase):
     """
-    Try parse all examples under workflow-examples dir.
+    Try extract essence from all examples under workflow-examples dir.
     Then compares results with expected solution.
     """
 
@@ -66,15 +67,16 @@ class TestParse(unittest.TestCase):
             return True
         return False
 
-    def test_parse(self):
+    def testExtract(self):
         dags = [f for f in os.listdir(examples_dir) if self.isDagFile(f)]
-
         for dag in dags:
             dag_path = os.path.join(examples_dir, dag)
-            tree = extractor.parse_codefile(dag_path)
-            workflow_info = extractor.extract_all(tree)
 
-            # check if its expected solution fil
+            essence_extractor = EssenceExtractor()
+            essence_extractor.parse_codefile(dag_path)
+            workflow_info = essence_extractor.extract()
+
+            # find its solution file
             expected_result_file = dag_path + extension_expected_result
             self.assertTrue(os.path.exists(expected_result_file))
 

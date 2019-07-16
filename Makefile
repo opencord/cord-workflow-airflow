@@ -18,24 +18,18 @@ SHELL = bash -e -o pipefail
 # Variables
 VERSION                  ?= $(shell cat ./VERSION)
 
-## Testing related
-CORDWORKFLOWAIRFLOW_LIBRARIES            := $(wildcard lib/*)
-
 # Targets
 all: test
 
 # Create a virtualenv and install all the libraries
-venv-workflowengine:
+venv-cordworkflowairflow:
 	virtualenv $@;\
     source ./$@/bin/activate ; set -u ;\
     pip install -r requirements.txt nose2 ;\
-    pip install -e lib/cord-workflow-essence-extractor
+    pip install -e ./
 
 # tests
-test: lib-test unit-test
-
-lib-test:
-	for lib in $(CORDWORKFLOWAIRFLOW_LIBRARIES); do pushd $$lib; tox; popd; done
+test: unit-test
 
 unit-test:
 	tox
@@ -47,12 +41,9 @@ clean:
     .coverage \
     coverage.xml \
     nose2-results.xml \
-    venv-workflowengine \
-    lib/*/.tox \
-    lib/*/build \
-    lib/*/dist \
-    lib/*/*.egg-info \
-    lib/*/.coverage \
-    lib/*/coverage.xml \
-    lib/*/*results.xml \
-    lib/*/*/VERSION
+    venv-cordworkflowairflow \
+    .tox \
+    build \
+    dist \
+    *.egg-info \
+    *results.xml

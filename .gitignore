@@ -8,5 +8,5 @@ cover
 .tox
 .DS_Store
 nose2-results.xml
-venv-service
+venv-cordworkflowairflow
 *.pyc
