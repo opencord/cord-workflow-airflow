@@ -5,95 +5,141 @@
             "local_variable": "dag_att"
         },
         "dependencies": {
+            "att_model_event_handler1": {
+                "parents": [
+                    "att_model_event_sensor1"
+                ]
+            },
+            "att_model_event_sensor1": {
+                "children": [
+                    "att_model_event_handler1"
+                ],
+                "parents": [
+                    "onu_event_handler",
+                    "dhcp_event_handler",
+                    "auth_event_handler"
+                ]
+            },
             "auth_event_handler": {
                 "children": [
-                    "onu_model_event_handler"
+                    "att_model_event_sensor1"
+                ],
+                "parents": [
+                    "auth_event_sensor"
+                ]
+            },
+            "auth_event_sensor": {
+                "children": [
+                    "auth_event_handler"
+                ]
+            },
+            "dhcp_event_handler": {
+                "children": [
+                    "att_model_event_sensor1"
+                ],
+                "parents": [
+                    "dhcp_event_sensor"
+                ]
+            },
+            "dhcp_event_sensor": {
+                "children": [
+                    "dhcp_event_handler"
                 ]
             },
             "onu_event_handler": {
                 "children": [
-                    "onu_model_event_handler"
+                    "att_model_event_sensor1"
+                ],
+                "parents": [
+                    "onu_event_sensor"
                 ]
             },
-            "onu_model_event_handler": {
-                "parents": [
-                    "onu_event_handler",
-                    "auth_event_handler"
+            "onu_event_sensor": {
+                "children": [
+                    "onu_event_handler"
                 ]
             }
         },
         "tasks": {
-            "auth_event_handler": {
-                "class": "XOSEventSensor",
+            "att_model_event_handler1": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "att_model_event_sensor1",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "local_variable": "att_model_event_handler1",
+                "python_callable": "DriverService_event",
+                "task_id": "att_model_event_handler1"
+            },
+            "att_model_event_sensor1": {
+                "class": "CORDModelSensor",
+                "controller_conn_id": "local_cord_controller",
                 "dag": "dag_att",
                 "dag_id": "att_workflow_onu",
                 "key_field": "serialNumber",
-                "local_variable": "auth_event_handler",
+                "local_variable": "att_model_event_sensor1",
+                "model_name": "AttWorkflowDriverServiceInstance",
                 "poke_interval": 5,
-                "provide_context": true,
-                "python_callable": "Auth_event",
-                "task_id": "auth_event_handler",
+                "task_id": "att_model_event_sensor1"
+            },
+            "auth_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "auth_event_sensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "local_variable": "auth_event_handler",
+                "python_callable": "AUTH_event",
+                "task_id": "auth_event_handler"
+            },
+            "auth_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "auth_event_sensor",
+                "poke_interval": 5,
+                "task_id": "auth_event_sensor",
                 "topic": "authentication.events"
             },
-            "auth_model_event_handler": {
-                "class": "XOSModelSensor",
-                "dag": "dag_att",
-                "dag_id": "att_workflow_onu",
-                "key_field": "serialNumber",
-                "local_variable": "auth_model_event_handler",
-                "model_name": "AttWorkflowDriverServiceInstance",
-                "poke_interval": 5,
-                "provide_context": true,
-                "python_callable": "DriverService_event",
-                "task_id": "auth_model_event_handler"
-            },
             "dhcp_event_handler": {
-                "class": "XOSEventSensor",
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "dhcp_event_sensor",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "local_variable": "dhcp_event_handler",
+                "python_callable": "DHCP_event",
+                "task_id": "dhcp_event_handler"
+            },
+            "dhcp_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
                 "dag": "dag_att",
                 "dag_id": "att_workflow_onu",
                 "key_field": "serialNumber",
-                "local_variable": "dhcp_event_handler",
+                "local_variable": "dhcp_event_sensor",
                 "poke_interval": 5,
-                "provide_context": true,
-                "python_callable": "DHCP_event",
-                "task_id": "dhcp_event_handler",
+                "task_id": "dhcp_event_sensor",
                 "topic": "dhcp.events"
             },
-            "dhcp_model_event_handler": {
-                "class": "XOSModelSensor",
-                "dag": "dag_att",
-                "dag_id": "att_workflow_onu",
-                "key_field": "serialNumber",
-                "local_variable": "dhcp_model_event_handler",
-                "model_name": "AttWorkflowDriverServiceInstance",
-                "poke_interval": 5,
-                "provide_context": true,
-                "python_callable": "DriverService_event",
-                "task_id": "dhcp_model_event_handler"
-            },
             "onu_event_handler": {
-                "class": "XOSEventSensor",
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "onu_event_sensor",
                 "dag": "dag_att",
                 "dag_id": "att_workflow_onu",
-                "key_field": "serialNumber",
                 "local_variable": "onu_event_handler",
-                "poke_interval": 5,
-                "provide_context": true,
                 "python_callable": "ONU_event",
-                "task_id": "onu_event_handler",
-                "topic": "onu.events"
+                "task_id": "onu_event_handler"
             },
-            "onu_model_event_handler": {
-                "class": "XOSModelSensor",
+            "onu_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
                 "dag": "dag_att",
                 "dag_id": "att_workflow_onu",
                 "key_field": "serialNumber",
-                "local_variable": "onu_model_event_handler",
-                "model_name": "AttWorkflowDriverServiceInstance",
+                "local_variable": "onu_event_sensor",
                 "poke_interval": 5,
-                "provide_context": true,
-                "python_callable": "DriverService_event",
-                "task_id": "onu_model_event_handler"
+                "task_id": "onu_event_sensor",
+                "topic": "onu.events"
             }
         }
     }

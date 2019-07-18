@@ -233,9 +233,5 @@ att_model_event_handler3 = CORDModelOperator(
 
 
 onu_event_sensor >> onu_event_handler >> att_model_event_sensor1 >> att_model_event_handler1
-att_model_event_handler1 >> auth_event_sensor
-
-att_model_event_handler2 << att_model_event_sensor2 << auth_event_handler << auth_event_sensor
-
-att_model_event_handler2 >> dhcp_event_sensor
+auth_event_sensor >> auth_event_handler >> att_model_event_sensor2 >> att_model_event_handler2
 dhcp_event_sensor >> dhcp_event_handler >> att_model_event_sensor3 >> att_model_event_handler3

@@ -21,7 +21,7 @@ This module extracts essence of airflow workflows
 Following information will be extracted from workflow code
 - DAG info
 - Operator info
-    - XOS-related operators
+    - CORD-related operators
     - Airflow operators
 - Dependency info
 """
@@ -388,9 +388,9 @@ class EssenceExtractor(object):
                 dags[dagid] = dag
         return dags
 
-    def __extract_XOS_event_sensors(self, tree):
+    def __extract_CORD_event_sensors(self, tree):
         operators = {}
-        calls = self.__extract_func_calls(tree, "XOSEventSensor")
+        calls = self.__extract_func_calls(tree, "CORDEventSensor")
         if calls:
             for call in calls:
                 operator = self.__make_airflow_operator(call)
@@ -398,9 +398,19 @@ class EssenceExtractor(object):
                 operators[operatorid] = operator
         return operators
 
-    def __extract_XOS_model_sensors(self, tree):
+    def __extract_CORD_model_sensors(self, tree):
         operators = {}
-        calls = self.__extract_func_calls(tree, "XOSModelSensor")
+        calls = self.__extract_func_calls(tree, "CORDModelSensor")
+        if calls:
+            for call in calls:
+                operator = self.__make_airflow_operator(call)
+                operatorid = operator["task_id"]
+                operators[operatorid] = operator
+        return operators
+
+    def __extract_CORD_model_operators(self, tree):
+        operators = {}
+        calls = self.__extract_func_calls(tree, "CORDModelOperator")
         if calls:
             for call in calls:
                 operator = self.__make_airflow_operator(call)
@@ -420,20 +430,27 @@ class EssenceExtractor(object):
 
     def __extract_all_operators(self, tree):
         operators = {}
-        event_sensors = self.__extract_XOS_event_sensors(tree)
+        event_sensors = self.__extract_CORD_event_sensors(tree)
         if event_sensors:
-            for event_sensor in event_sensors:
-                operators[event_sensor] = event_sensors[event_sensor]
+            for task_id in event_sensors:
+                operators[task_id] = event_sensors[task_id]
 
-        model_sensors = self.__extract_XOS_model_sensors(tree)
+        model_sensors = self.__extract_CORD_model_sensors(tree)
         if model_sensors:
-            for model_sensor in model_sensors:
-                operators[model_sensor] = model_sensors[model_sensor]
+            for task_id in model_sensors:
+                operators[task_id] = model_sensors[task_id]
+
+        model_operators = self.__extract_CORD_model_operators(tree)
+        if model_operators:
+            for task_id in model_operators:
+                operators[task_id] = model_operators[task_id]
 
         airflow_operators = self.__extract_airflow_operators(tree)
         if airflow_operators:
-            for airflow_operator in airflow_operators:
-                operators[airflow_operator] = airflow_operators[airflow_operator]
+            for task_id in airflow_operators:
+                # add operators that are not already handled above
+                if task_id not in operators:
+                    operators[task_id] = airflow_operators[task_id]
 
         return operators
 
@@ -582,8 +599,6 @@ def pretty_format_json(j):
 
 # for command-line execution
 def main(args):
-    print_graffiti()
-
     # check if config path is set
     config_file_path = DEFAULT_CONFIG_FILE_PATH
     if args.config:
@@ -601,21 +616,25 @@ def main(args):
     log = create_logger(progargs["logging"])
 
     code_filepath = args.input_file
-    if os.path.exists(code_filepath):
-        raise 'cannot find an input file - %s' % code_filepath
-
-    extractor = EssenceExtractor(logger=log)
-    extractor.parse_codefile(code_filepath)
-    essence = extractor.extract()
+    if not os.path.exists(code_filepath):
+        raise IOError('cannot find an input file - %s' % code_filepath)
 
     output_filepath = './essence.json'
     if args.output:
         output_filepath = args.output
 
-    json_string = pretty_format_json(essence)
+    print_console = False
     if args.stdout or output_filepath == '-':
+        print_console = True
+
+    extractor = EssenceExtractor(logger=log)
+    extractor.parse_codefile(code_filepath)
+    essence = extractor.extract()
+    json_string = pretty_format_json(essence)
+    if print_console:
         print(json_string)
     else:
+        print_graffiti()
         with open(output_filepath, 'w') as f:
             f.write(json_string)
 

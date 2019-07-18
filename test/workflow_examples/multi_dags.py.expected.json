@@ -10,19 +10,43 @@
                     "att_model_event_sensor1"
                 ]
             },
+            "att_model_event_handler2": {
+                "parents": [
+                    "att_model_event_sensor2"
+                ]
+            },
+            "att_model_event_handler3": {
+                "parents": [
+                    "att_model_event_sensor3"
+                ]
+            },
             "att_model_event_sensor1": {
                 "children": [
                     "att_model_event_handler1"
                 ],
                 "parents": [
-                    "onu_event_handler",
-                    "auth_event_handler",
+                    "onu_event_handler"
+                ]
+            },
+            "att_model_event_sensor2": {
+                "children": [
+                    "att_model_event_handler2"
+                ],
+                "parents": [
+                    "auth_event_handler"
+                ]
+            },
+            "att_model_event_sensor3": {
+                "children": [
+                    "att_model_event_handler3"
+                ],
+                "parents": [
                     "dhcp_event_handler"
                 ]
             },
             "auth_event_handler": {
                 "children": [
-                    "att_model_event_sensor1"
+                    "att_model_event_sensor2"
                 ],
                 "parents": [
                     "auth_event_sensor"
@@ -35,7 +59,7 @@
             },
             "dhcp_event_handler": {
                 "children": [
-                    "att_model_event_sensor1"
+                    "att_model_event_sensor3"
                 ],
                 "parents": [
                     "dhcp_event_sensor"
@@ -70,6 +94,24 @@
                 "python_callable": "DriverService_event",
                 "task_id": "att_model_event_handler1"
             },
+            "att_model_event_handler2": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "att_model_event_sensor2",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "local_variable": "att_model_event_handler2",
+                "python_callable": "DriverService_event",
+                "task_id": "att_model_event_handler2"
+            },
+            "att_model_event_handler3": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "att_model_event_sensor3",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "local_variable": "att_model_event_handler3",
+                "python_callable": "DriverService_event",
+                "task_id": "att_model_event_handler3"
+            },
             "att_model_event_sensor1": {
                 "class": "CORDModelSensor",
                 "controller_conn_id": "local_cord_controller",
@@ -80,6 +122,28 @@
                 "model_name": "AttWorkflowDriverServiceInstance",
                 "poke_interval": 5,
                 "task_id": "att_model_event_sensor1"
+            },
+            "att_model_event_sensor2": {
+                "class": "CORDModelSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "att_model_event_sensor2",
+                "model_name": "AttWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "task_id": "att_model_event_sensor2"
+            },
+            "att_model_event_sensor3": {
+                "class": "CORDModelSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_att",
+                "dag_id": "att_workflow_onu",
+                "key_field": "serialNumber",
+                "local_variable": "att_model_event_sensor3",
+                "model_name": "AttWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "task_id": "att_model_event_sensor3"
             },
             "auth_event_handler": {
                 "class": "CORDModelOperator",

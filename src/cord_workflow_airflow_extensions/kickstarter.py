@@ -30,9 +30,11 @@ import time
 
 from multistructlog import create_logger
 from cord_workflow_controller_client.manager import Manager
-from airflow.api.client.json_client import Client as AirflowClient
-from requests.auth import HTTPBasicAuth
+from importlib import import_module
 from urlparse import urlparse
+from airflow import configuration as AirflowConf
+from airflow import api
+from airflow.models import DagRun
 
 
 log = create_logger()
@@ -41,9 +43,6 @@ airflow_client = None
 
 progargs = {
     'controller_url': 'http://localhost:3030',
-    'airflow_url': 'http://localhost:8080',
-    'airflow_username': '',
-    'airflow_password': '',
     'logging': None
 }
 
@@ -62,9 +61,6 @@ def get_arg_parser():
     parser = argparse.ArgumentParser(description='CORD Workflow Kickstarter Daemon.', prog='kickstarter')
     parser.add_argument('--config', help='locate a configuration file')
     parser.add_argument('--controller', help='CORD Workflow Controller URL')
-    parser.add_argument('--airflow', help='Airflow REST URL')
-    parser.add_argument('--airflow_user', help='User Name to access Airflow Web Interface')
-    parser.add_argument('--airflow_passwd', help='Password to access Airlfow Web Interface')
     return parser
 
 
@@ -127,12 +123,46 @@ def on_kickstart(workflow_id, workflow_run_id):
             log.info('> Kickstarting a workflow (%s) => workflow run (%s)' % (workflow_id, workflow_run_id))
 
             airflow_client.trigger_dag(dag_id=workflow_id, run_id=workflow_run_id)
+            message = airflow_client.trigger_dag(
+                dag_id=workflow_id,
+                run_id=workflow_run_id
+            )
+            log.info('> Airflow Response: %s' % message)
 
             # let controller know that the new workflow run is created
             log.info('> Notifying a workflow (%s), a workflow run (%s)' % (workflow_id, workflow_run_id))
             manager.notify_new_workflow_run(workflow_id, workflow_run_id)
+        except Exception as e:
+            log.error('> Error : %s' % e)
+            log.debug(traceback.format_exc())
 
-            log.info('> OK')
+
+def on_check_state(workflow_id, workflow_run_id):
+    if manager and airflow_client:
+        try:
+            log.info('> Checking state of a workflow (%s) => workflow run (%s)' % (workflow_id, workflow_run_id))
+
+            run = DagRun.find(dag_id=workflow_id, run_id=workflow_run_id)
+            state = 'unknown'
+            if run:
+                # run is an array
+                # this should be one of ['success', 'running', 'failed']
+                state = run[0].state
+            else:
+                log.error(
+                    'Cannot retrieve state of a workflow run (%s, %s)' %
+                    (workflow_id, workflow_run_id)
+                )
+                state = 'unknown'
+
+            log.info('> state : %s' % state)
+
+            # let controller know the state of the workflow run
+            log.info(
+                '> Notifying update of state of a workflow (%s), a workflow run (%s) - state : %s' %
+                (workflow_id, workflow_run_id, state)
+            )
+            manager.report_workflow_run_state(workflow_id, workflow_run_id, state)
         except Exception as e:
             log.error('> Error : %s' % e)
             log.debug(traceback.format_exc())
@@ -159,17 +189,8 @@ def main(args):
     global log
     log = create_logger(progargs["logging"])
 
-    if args.airflow:
-        progargs['airflow_url'] = args.airflow
-
     if args.controller:
         progargs['controller_url'] = args.controller
-
-    if args.airflow_user:
-        progargs['airflow_user'] = args.airflow_user
-
-    if args.airflow_passwd:
-        progargs['airflow_passwd'] = args.airflow_passwd
 
     print('=CONFIG=')
     config_json_string = pretty_format_json(progargs)
@@ -181,13 +202,7 @@ def main(args):
     controller_live = check_web_live(progargs['controller_url'])
     if not controller_live:
         log.error('Controller (%s) appears to be down' % progargs['controller_url'])
-        raise 'Controller (%s) appears to be down' % progargs['controller_url']
-
-    log.info('Checking if Airflow (%s) is live...' % progargs['airflow_url'])
-    airflow_live = check_web_live(progargs['airflow_url'])
-    if not airflow_live:
-        log.error('Airflow (%s) appears to be down' % progargs['airflow_url'])
-        raise 'Airflow (%s) appears to be down' % progargs['airflow_url']
+        raise IOError('Controller (%s) appears to be down' % progargs['controller_url'])
 
     # connect to workflow controller
     log.info('Connecting to Workflow Controller (%s)...' % progargs['controller_url'])
@@ -198,13 +213,14 @@ def main(args):
 
     # connect to airflow
     global airflow_client
-    log.info('Connecting to Airflow (%s)...' % progargs['airflow_url'])
-    http_auth = None
-    if progargs['airflow_user'] and progargs['airflow_passwd']:
-        log.info('Using a username %s' % progargs['airflow_user'])
-        http_auth = HTTPBasicAuth(progargs['airflow_user'], progargs['airflow_passwd'])
+    log.info('Connecting to Airflow...')
 
-    airflow_client = AirflowClient(progargs['airflow_url'], auth=http_auth)
+    api.load_auth()
+    api_module = import_module(AirflowConf.get('cli', 'api_client'))
+    airflow_client = api_module.Client(
+        api_base_url=AirflowConf.get('cli', 'endpoint_url'),
+        auth=api.api_auth.client_auth
+    )
 
     log.info('Waiting for kickstart events from Workflow Controller...')
     try:

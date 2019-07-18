@@ -31,22 +31,27 @@ from cord_workflow_controller_client.manager import Manager
 log = create_logger()
 progargs = {
     'controller_url': 'http://localhost:3030',
-    'airflow_url': 'http://localhost:8080',
-    'airflow_username': '',
-    'airflow_password': '',
     'logging': None
 }
 
 DEFAULT_CONFIG_FILE_PATH = '/etc/cord_workflow_airflow_extensions/config.json'
 
 
+class InputError(Exception):
+    """Exception raised for errors in the input.
+
+    Attributes:
+        message -- explanation of the error
+    """
+
+    def __init__(self, message):
+        self.message = message
+
+
 def get_arg_parser():
     parser = argparse.ArgumentParser(description='CORD Workflow Control CLI.', prog='workflow_ctl')
     parser.add_argument('--config', help='locate a configuration file')
     parser.add_argument('--controller', help='CORD Workflow Controller URL')
-    parser.add_argument('--airflow', help='Airflow REST URL')
-    parser.add_argument('--airflow_user', help='User Name to access Airflow Web Interface')
-    parser.add_argument('--airflow_passwd', help='Password to access Airlfow Web Interface')
     parser.add_argument('cmd', help='Command')
     parser.add_argument('cmd_args', help='Arguments for the command', nargs='*')
     return parser
@@ -70,7 +75,7 @@ def read_json_file(filename):
 def register_workflow(args):
     # expect args should be a list of essence files
     if not args:
-        raise 'no essence file is given'
+        raise InputError('no essence file is given')
 
     log.info('Connecting to Workflow Controller (%s)...' % progargs['controller_url'])
     manager = Manager(logger=log)
@@ -121,17 +126,8 @@ def main(args):
     global log
     log = create_logger(progargs["logging"])
 
-    if args.airflow:
-        progargs['airflow_url'] = args.airflow
-
     if args.controller:
         progargs['controller_url'] = args.controller
-
-    if args.airflow_user:
-        progargs['airflow_user'] = args.airflow_user
-
-    if args.airflow_passwd:
-        progargs['airflow_passwd'] = args.airflow_passwd
 
     if args.cmd:
         if args.cmd.strip().lower() in ['reg', 'register', 'register_workflow']:
@@ -139,7 +135,7 @@ def main(args):
             print(results)
         else:
             log.error('unknown command %s' % args.cmd)
-            raise 'unknown command %s' % args.cmd
+            raise InputError('unknown command %s' % args.cmd)
 
 
 if __name__ == "__main__":

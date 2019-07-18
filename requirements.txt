@@ -4,4 +4,4 @@ apache-airflow~=1.10.2
 multistructlog~=2.1.0
 requests~=2.22.0
 pyfiglet~=0.7
-cord-workflow-controller-client~=0.1.0
+cord-workflow-controller-client~=0.2.0

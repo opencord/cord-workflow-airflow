@@ -16,18 +16,18 @@
 Example AT&T workflow using Airflow
 """
 import json
-import logging  
-from datetime import datetime
-
+import logging
 import airflow
+from datetime import datetime
 from airflow import DAG
 from airflow import AirflowException
-
-import xossynchronizer.airflow.sensors.XOSModelSensor
-import xossynchronizer.airflow.sensors.XOSEventSensor
+from airflow.operators import PythonOperator
+from cord_workflow_airflow_extensions.sensors import CORDEventSensor, CORDModelSensor
+from cord_workflow_airflow_extensions.operators import CORDModelOperator
 
 from att_helpers import *
 from att_service_instance_funcs import *
+
 
 args = {
     'start_date': datetime.utcnow(),
@@ -44,39 +44,67 @@ dag_att = DAG(
 dag_att.doc_md = __doc__
 
 
-def ONU_event(model_accessor, event, **kwargs):
+def ONU_event(model_accessor, message, **kwargs):
     #context = kwargs
     #run_id = context['dag_run'].run_id
 
-    logging.info("onu.events: received event", event=event)
+    logging.info('onu.events: received event', message=message)
 
-    si = find_or_create_att_si(model_accessor, logging, event)
-    if event["status"] == "activated":
-        logging.info("onu.events: activated onu", value=event)
+    si = find_or_create_att_si(model_accessor, logging, message)
+    if message['status'] == 'activated':
+        logging.info('onu.events: activated onu', message=message)
         si.no_sync = False
-        si.uni_port_id = long(event["portNumber"])
-        si.of_dpid = event["deviceId"]
-        si.oper_onu_status = "ENABLED"
+        si.uni_port_id = long(message['portNumber'])
+        si.of_dpid = message['deviceId']
+        si.oper_onu_status = 'ENABLED'
         si.save_changed_fields(always_update_timestamp=True)
-    elif event["status"] == "disabled":
-        logging.info("onu.events: disabled onu, resetting the subscriber", value=event)
-        si.oper_onu_status = "DISABLED"
+    elif message['status'] == 'disabled':
+        logging.info('onu.events: disabled onu, resetting the subscriber', value=message)
+        si.oper_onu_status = 'DISABLED'
         si.save_changed_fields(always_update_timestamp=True)
     else:
-        logging.warn("onu.events: Unknown status value: %s" % event["status"], value=event)
-        raise AirflowException("onu.events: Unknown status value: %s" % event["status"], value=event)
+        logging.warn('onu.events: Unknown status value: %s' % message['status'], value=message)
+        raise AirflowException('onu.events: Unknown status value: %s' % message['status'], value=message)
 
 
-def DriverService_event(event_type, model_accessor, si, **kwargs):
+def AUTH_event(model_accessor, message, **kwargs):
     #context = kwargs
     #run_id = context['dag_run'].run_id
-    
+
+    logging.info('authentication.events: Got event for subscriber', message=message)
+
+    si = find_or_create_att_si(model_accessor, logging, message)
+    logging.debug('authentication.events: Updating service instance', si=si)
+    si.authentication_state = message['authenticationState']
+    si.save_changed_fields(always_update_timestamp=True)
+
+
+def DHCP_event(model_accessor, message, **kwargs):
+    #context = kwargs
+    #run_id = context['dag_run'].run_id
+
+    logging.info('dhcp.events: Got event for subscriber', message=message)
+
+    si = find_or_create_att_si(model_accessor, logging, message)
+    logging.debug('dhcp.events: Updating service instance', si=si)
+    si.dhcp_state = message['messageType']
+    si.ip_address = message['ipAddress']
+    si.mac_address = message['macAddress']
+    si.save_changed_fields(always_update_timestamp=True)
+
+
+def DriverService_event(model_accessor, message, si, **kwargs):
+    #context = kwargs
+    #run_id = context['dag_run'].run_id
+
+    event_type = message['event_type']
+
     go = False
     if event_type == 'create':
-        logging.debug("MODEL_POLICY: handle_create for AttWorkflowDriverServiceInstance %s " % si.id)
+        logging.debug('MODEL_POLICY: handle_create for AttWorkflowDriverServiceInstance %s ' % si.id)
         go = True
     elif event_type == 'update':
-        logging.debug("MODEL_POLICY: handle_update for AttWorkflowDriverServiceInstance %s " %
+        logging.debug('MODEL_POLICY: handle_update for AttWorkflowDriverServiceInstance %s ' %
                           (si.id), onu_state=si.admin_onu_state, authentication_state=si.authentication_state)
         go = True
     elif event_type == 'delete':
@@ -107,91 +135,73 @@ def DriverService_event(event_type, model_accessor, si, **kwargs):
     si.save_changed_fields()
 
 
-def Auth_event(model_accessor, event, **kwargs):
-    #context = kwargs
-    #run_id = context['dag_run'].run_id
-
-    logging.info("authentication.events: Got event for subscriber", event_value=event)
-
-    si = find_or_create_att_si(model_accessor, logging, event)
-    logging.debug("authentication.events: Updating service instance", si=si)
-    si.authentication_state = event["authenticationState"]
-    si.save_changed_fields(always_update_timestamp=True)
-
-
-def DHCP_event(model_accessor, event, **kwargs):
-    #context = kwargs
-    #run_id = context['dag_run'].run_id
-
-    logging.info("dhcp.events: Got event for subscriber", event_value=event)
-
-    si = find_or_create_att_si(model_accessor, logging, event)
-    logging.debug("dhcp.events: Updating service instance", si=si)
-    si.dhcp_state = event["messageType"]
-    si.ip_address = event["ipAddress"]
-    si.mac_address = event["macAddress"]
-    si.save_changed_fields(always_update_timestamp=True)
-
-
-onu_event_handler = XOSEventSensor(
-    task_id='onu_event_handler',
+onu_event_sensor = CORDEventSensor(
+    task_id='onu_event_sensor',
     topic='onu.events',
     key_field='serialNumber',
-    provide_context=True,
+    controller_conn_id='local_cord_controller',
+    poke_interval=5,
+    dag=dag_att
+)
+
+onu_event_handler = CORDModelOperator(
+    task_id='onu_event_handler',
     python_callable=ONU_event,
-    poke_interval=5,
-    dag=dag_att,
+    cord_event_sensor_task_id='onu_event_sensor',
+    dag=dag_att
 )
 
-onu_model_event_handler = XOSModelSensor(
-    task_id='onu_model_event_handler',
-    model_name='AttWorkflowDriverServiceInstance',
+auth_event_sensor = CORDEventSensor(
+    task_id='auth_event_sensor',
+    topic='authentication.events',
     key_field='serialNumber',
-    provide_context=True,
-    python_callable=DriverService_event,
+    controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att,
+    dag=dag_att
 )
 
-auth_event_handler = XOSEventSensor(
+auth_event_handler = CORDModelOperator(
     task_id='auth_event_handler',
-    topic="authentication.events",
-    key_field='serialNumber',
-    provide_context=True,
-    python_callable=Auth_event,
-    poke_interval=5,
-    dag=dag_att,
+    python_callable=AUTH_event,
+    cord_event_sensor_task_id='auth_event_sensor',
+    dag=dag_att
 )
 
-auth_model_event_handler = XOSModelSensor(
-    task_id='auth_model_event_handler',
-    model_name='AttWorkflowDriverServiceInstance',
+dhcp_event_sensor = CORDEventSensor(
+    task_id='dhcp_event_sensor',
+    topic='dhcp.events',
     key_field='serialNumber',
-    provide_context=True,
-    python_callable=DriverService_event,
+    controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att,
+    dag=dag_att
 )
 
-dhcp_event_handler = XOSEventSensor(
+dhcp_event_handler = CORDModelOperator(
     task_id='dhcp_event_handler',
-    topic="dhcp.events",
-    key_field='serialNumber',
-    provide_context=True,
     python_callable=DHCP_event,
-    poke_interval=5,
-    dag=dag_att,
+    cord_event_sensor_task_id='dhcp_event_sensor',
+    dag=dag_att
 )
 
-dhcp_model_event_handler = XOSModelSensor(
-    task_id='dhcp_model_event_handler',
+att_model_event_sensor1 = CORDModelSensor(
+    task_id='att_model_event_sensor1',
     model_name='AttWorkflowDriverServiceInstance',
     key_field='serialNumber',
-    provide_context=True,
-    python_callable=DriverService_event,
+    controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att,
+    dag=dag_att
 )
 
-onu_event_handler >> [onu_model_event_handler, auth_model_event_handler, dhcp_model_event_handler] >> \
-    auth_event_handler >> dhcp_event_handler
+att_model_event_handler1 = CORDModelOperator(
+    task_id='att_model_event_handler1',
+    python_callable=DriverService_event,
+    cord_event_sensor_task_id='att_model_event_sensor1',
+    dag=dag_att
+)
+
+
+onu_event_sensor >> onu_event_handler
+auth_event_sensor >> auth_event_handler
+dhcp_event_sensor >> dhcp_event_handler
+
+[onu_event_handler, auth_event_handler, dhcp_event_handler] >> att_model_event_sensor1 >> att_model_event_handler1
