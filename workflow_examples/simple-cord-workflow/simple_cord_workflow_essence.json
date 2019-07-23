@@ -1,0 +1,222 @@
+{
+    "simple_cord_workflow": {
+        "dag": {
+            "dag_id": "simple_cord_workflow",
+            "local_variable": "dag_cord"
+        },
+        "dependencies": {
+            "cord_model_event_handler1": {
+                "children": [
+                    "auth_event_sensor"
+                ],
+                "parents": [
+                    "cord_model_event_sensor1"
+                ]
+            },
+            "cord_model_event_handler2": {
+                "children": [
+                    "dhcp_event_sensor"
+                ],
+                "parents": [
+                    "cord_model_event_sensor2"
+                ]
+            },
+            "cord_model_event_handler3": {
+                "parents": [
+                    "cord_model_event_sensor3"
+                ]
+            },
+            "cord_model_event_sensor1": {
+                "children": [
+                    "cord_model_event_handler1"
+                ],
+                "parents": [
+                    "onu_event_handler"
+                ]
+            },
+            "cord_model_event_sensor2": {
+                "children": [
+                    "cord_model_event_handler2"
+                ],
+                "parents": [
+                    "auth_event_handler"
+                ]
+            },
+            "cord_model_event_sensor3": {
+                "children": [
+                    "cord_model_event_handler3"
+                ],
+                "parents": [
+                    "dhcp_event_handler"
+                ]
+            },
+            "auth_event_handler": {
+                "children": [
+                    "cord_model_event_sensor2"
+                ],
+                "parents": [
+                    "auth_event_sensor"
+                ]
+            },
+            "auth_event_sensor": {
+                "children": [
+                    "auth_event_handler"
+                ],
+                "parents": [
+                    "cord_model_event_handler1"
+                ]
+            },
+            "dhcp_event_handler": {
+                "children": [
+                    "cord_model_event_sensor3"
+                ],
+                "parents": [
+                    "dhcp_event_sensor"
+                ]
+            },
+            "dhcp_event_sensor": {
+                "children": [
+                    "dhcp_event_handler"
+                ],
+                "parents": [
+                    "cord_model_event_handler2"
+                ]
+            },
+            "onu_event_handler": {
+                "children": [
+                    "cord_model_event_sensor1"
+                ],
+                "parents": [
+                    "onu_event_sensor"
+                ]
+            },
+            "onu_event_sensor": {
+                "children": [
+                    "onu_event_handler"
+                ]
+            }
+        },
+        "tasks": {
+            "cord_model_event_handler1": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "cord_model_event_sensor1",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "local_variable": "cord_model_event_handler1",
+                "python_callable": "DriverService_event",
+                "task_id": "cord_model_event_handler1"
+            },
+            "cord_model_event_handler2": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "cord_model_event_sensor2",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "local_variable": "cord_model_event_handler2",
+                "python_callable": "DriverService_event",
+                "task_id": "cord_model_event_handler2"
+            },
+            "cord_model_event_handler3": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "cord_model_event_sensor3",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "local_variable": "cord_model_event_handler3",
+                "python_callable": "DriverService_event",
+                "task_id": "cord_model_event_handler3"
+            },
+            "cord_model_event_sensor1": {
+                "class": "CORDModelSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "cord_model_event_sensor1",
+                "model_name": "cordWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "task_id": "cord_model_event_sensor1"
+            },
+            "cord_model_event_sensor2": {
+                "class": "CORDModelSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "cord_model_event_sensor2",
+                "model_name": "cordWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "task_id": "cord_model_event_sensor2"
+            },
+            "cord_model_event_sensor3": {
+                "class": "CORDModelSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "cord_model_event_sensor3",
+                "model_name": "cordWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "task_id": "cord_model_event_sensor3"
+            },
+            "auth_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "auth_event_sensor",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "local_variable": "auth_event_handler",
+                "python_callable": "AUTH_event",
+                "task_id": "auth_event_handler"
+            },
+            "auth_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "auth_event_sensor",
+                "poke_interval": 5,
+                "task_id": "auth_event_sensor",
+                "topic": "authentication.events"
+            },
+            "dhcp_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "dhcp_event_sensor",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "local_variable": "dhcp_event_handler",
+                "python_callable": "DHCP_event",
+                "task_id": "dhcp_event_handler"
+            },
+            "dhcp_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "dhcp_event_sensor",
+                "poke_interval": 5,
+                "task_id": "dhcp_event_sensor",
+                "topic": "dhcp.events"
+            },
+            "onu_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "onu_event_sensor",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "local_variable": "onu_event_handler",
+                "python_callable": "ONU_event",
+                "task_id": "onu_event_handler"
+            },
+            "onu_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_cord",
+                "dag_id": "simple_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "onu_event_sensor",
+                "poke_interval": 5,
+                "task_id": "onu_event_sensor",
+                "topic": "onu.events"
+            }
+        }
+    }
+}

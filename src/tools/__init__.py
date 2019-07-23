@@ -11,33 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import absolute_import
-import unittest
-
-from tools.workflow_ctl import register_workflow
-
-
-class TestWorkflowCtl(unittest.TestCase):
-    """
-    Check if some private functions work.
-    """
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def testRegisterWorkflow(self):
-        failed = False
-        try:
-            register_workflow(None)
-        except BaseException:
-            failed = True
-
-        self.assertTrue(failed, 'invalid args should fail')
-
-
-if __name__ == "__main__":
-    unittest.main()

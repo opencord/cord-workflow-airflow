@@ -18,7 +18,7 @@ import json
 import os
 import collections
 
-from cord_workflow_airflow_extensions.essence_extractor import EssenceExtractor
+from tools.essence_extractor import EssenceExtractor
 
 
 test_path = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))

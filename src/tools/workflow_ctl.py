@@ -23,9 +23,11 @@ This module kickstarts Airflow workflows for requests from Workflow Controller
 import json
 import os.path
 import argparse
+import re
 
 from multistructlog import create_logger
 from cord_workflow_controller_client.manager import Manager
+from cord_workflow_controller_client.probe import Probe
 
 
 log = create_logger()
@@ -72,6 +74,27 @@ def read_json_file(filename):
     return None
 
 
+def read_json_string(str):
+    if str:
+        try:
+            return json.loads(str)
+        except json.decoder.JSONDecodeError:
+            return load_dirty_json(str)
+    return None
+
+
+def load_dirty_json(dirty_json):
+    regex_replace = [
+        (r"([ \{,:\[])(u)?'([^']+)'", r'\1"\3"'),
+        (r" False([, \}\]])", r' false\1'),
+        (r" True([, \}\]])", r' true\1')
+    ]
+    for r, s in regex_replace:
+        dirty_json = re.sub(r, s, dirty_json)
+    clean_json = json.loads(dirty_json)
+    return clean_json
+
+
 def register_workflow(args):
     # expect args should be a list of essence files
     if not args:
@@ -95,7 +118,7 @@ def register_workflow(args):
             log.info('Registering an essence file (%s)...' % essence_file)
             result = manager.register_workflow_essence(essence)
             if result:
-                log.inof('registered an essence file (%s)' % essence_file)
+                log.info('registered an essence file (%s)' % essence_file)
             else:
                 log.error('cannot register an essence file (%s)' % essence_file)
 
@@ -105,6 +128,33 @@ def register_workflow(args):
             manager.disconnect()
 
     return results
+
+
+def emit_event(args):
+    # expect args should be a json event
+    if not args or len(args) != 2:
+        raise InputError('parameter should be <topic> <message>')
+
+    log.info('Connecting to Workflow Controller (%s)...' % progargs['controller_url'])
+    probe = Probe(logger=log)
+    connected = False
+
+    try:
+        probe.connect(progargs['controller_url'])
+        connected = True
+
+        topic = args[0]
+        message = read_json_string(args[1])
+
+        log.info('Emitting an event (%s - %s)...' % (topic, message))
+        probe.emit_event(topic, message)
+        log.info('Emitted an event (%s - %s)...' % (topic, message))
+        return True
+    finally:
+        if connected:
+            probe.disconnect()
+
+    return False
 
 
 # for command-line execution
@@ -121,7 +171,8 @@ def main(args):
             global progargs
             for k in progargs:
                 # overwrite
-                progargs[k] = config[k]
+                if k in config:
+                    progargs[k] = config[k]
 
     global log
     log = create_logger(progargs["logging"])
@@ -132,6 +183,9 @@ def main(args):
     if args.cmd:
         if args.cmd.strip().lower() in ['reg', 'register', 'register_workflow']:
             results = register_workflow(args.cmd_args)
+            print(results)
+        elif args.cmd.strip().lower() in ['emit', 'send', 'event', 'message']:
+            results = emit_event(args.cmd_args)
             print(results)
         else:
             log.error('unknown command %s' % args.cmd)

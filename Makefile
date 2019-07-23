@@ -37,14 +37,14 @@ DOCKER_LABEL_BUILD_DATE  ?= $(shell date -u "+%Y-%m-%dT%H:%M:%SZ")
 all: test
 
 docker-build:
-	docker build $(DOCKER_BUILD_ARGS) \
+	 docker build $(DOCKER_BUILD_ARGS) \
     -t ${DOCKER_IMAGENAME} \
     --build-arg org_label_schema_version="${VERSION}" \
     --build-arg org_label_schema_vcs_url="${DOCKER_LABEL_VCS_URL}" \
     --build-arg org_label_schema_vcs_ref="${DOCKER_LABEL_VCS_REF}" \
     --build-arg org_label_schema_build_date="${DOCKER_LABEL_BUILD_DATE}" \
     --build-arg org_opencord_vcs_commit_date="${DOCKER_LABEL_COMMIT_DATE}" \
-    -f Dockerfile .
+    -f ./docker/Dockerfile .
 
 docker-push:
 	docker push ${DOCKER_IMAGENAME}

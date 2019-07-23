@@ -13,39 +13,40 @@
 # limitations under the License.
 
 """
-Example AT&T workflow using Airflow
+Example CORD workflow using Airflow
 """
 
 
 import logging
 from datetime import datetime
 from airflow import DAG
-from cord_workflow_airflow_extensions.sensors import CORDEventSensor, CORDModelSensor
-from cord_workflow_airflow_extensions.operators import CORDModelOperator
+from airflow.sensors.cord_workflow_plugin import CORDEventSensor, CORDModelSensor
+from airflow.operators.cord_workflow_plugin import CORDModelOperator
 
 
 log = logging.getLogger(__name__)
 
 args = {
-    'start_date': datetime.utcnow(),
-    'owner': 'iychoi',
+    # hard coded date
+    'start_date': datetime(2019, 1, 1),
+    'owner': 'iychoi'
 }
 
-dag_att = DAG(
-    dag_id='simple_att_workflow',
+dag_cord = DAG(
+    dag_id='simple_cord_workflow',
     default_args=args,
     # this dag will be triggered by external systems
-    schedule_interval=None,
+    schedule_interval=None
 )
 
-dag_att.doc_md = __doc__
+dag_cord.doc_md = __doc__
 
 
 def ONU_event(model_accessor, message, **kwargs):
     log.info('onu.events: received an event - %s' % message)
 
     """
-    si = find_or_create_att_si(model_accessor, logging, message)
+    si = find_or_create_cord_si(model_accessor, logging, message)
     if message['status'] == 'activated':
         logging.info('onu.events: activated onu', message=message)
         si.no_sync = False
@@ -67,7 +68,7 @@ def AUTH_event(model_accessor, message, **kwargs):
     log.info('authentication.events: received an event - %s' % message)
 
     """
-    si = find_or_create_att_si(model_accessor, logging, message)
+    si = find_or_create_cord_si(model_accessor, logging, message)
     logging.debug('authentication.events: Updating service instance', si=si)
     si.authentication_state = message['authenticationState']
     si.save_changed_fields(always_update_timestamp=True)
@@ -78,7 +79,7 @@ def DHCP_event(model_accessor, message, **kwargs):
     log.info('dhcp.events: received an event - %s' % message)
 
     """
-    si = find_or_create_att_si(model_accessor, logging, message)
+    si = find_or_create_cord_si(model_accessor, logging, message)
     logging.debug('dhcp.events: Updating service instance', si=si)
     si.dhcp_state = message['messageType']
     si.ip_address = message['ipAddress']
@@ -94,13 +95,13 @@ def DriverService_event(model_accessor, message, **kwargs):
     event_type = message['event_type']
 
     go = False
-    si = find_or_create_att_si(model_accessor, logging, message)
+    si = find_or_create_cord_si(model_accessor, logging, message)
 
     if event_type == 'create':
-        logging.debug('MODEL_POLICY: handle_create for AttWorkflowDriverServiceInstance %s ' % si.id)
+        logging.debug('MODEL_POLICY: handle_create for cordWorkflowDriverServiceInstance %s ' % si.id)
         go = True
     elif event_type == 'update':
-        logging.debug('MODEL_POLICY: handle_update for AttWorkflowDriverServiceInstance %s ' %
+        logging.debug('MODEL_POLICY: handle_update for cordWorkflowDriverServiceInstance %s ' %
                           (si.id), onu_state=si.admin_onu_state, authentication_state=si.authentication_state)
         go = True
     elif event_type == 'delete':
@@ -138,14 +139,14 @@ onu_event_sensor = CORDEventSensor(
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att
+    dag=dag_cord
 )
 
 onu_event_handler = CORDModelOperator(
     task_id='onu_event_handler',
     python_callable=ONU_event,
     cord_event_sensor_task_id='onu_event_sensor',
-    dag=dag_att
+    dag=dag_cord
 )
 
 auth_event_sensor = CORDEventSensor(
@@ -154,14 +155,14 @@ auth_event_sensor = CORDEventSensor(
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att
+    dag=dag_cord
 )
 
 auth_event_handler = CORDModelOperator(
     task_id='auth_event_handler',
     python_callable=AUTH_event,
     cord_event_sensor_task_id='auth_event_sensor',
-    dag=dag_att
+    dag=dag_cord
 )
 
 dhcp_event_sensor = CORDEventSensor(
@@ -170,65 +171,65 @@ dhcp_event_sensor = CORDEventSensor(
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att
+    dag=dag_cord
 )
 
 dhcp_event_handler = CORDModelOperator(
     task_id='dhcp_event_handler',
     python_callable=DHCP_event,
     cord_event_sensor_task_id='dhcp_event_sensor',
-    dag=dag_att
+    dag=dag_cord
 )
 
-att_model_event_sensor1 = CORDModelSensor(
-    task_id='att_model_event_sensor1',
-    model_name='AttWorkflowDriverServiceInstance',
+cord_model_event_sensor1 = CORDModelSensor(
+    task_id='cord_model_event_sensor1',
+    model_name='cordWorkflowDriverServiceInstance',
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att
+    dag=dag_cord
 )
 
-att_model_event_handler1 = CORDModelOperator(
-    task_id='att_model_event_handler1',
+cord_model_event_handler1 = CORDModelOperator(
+    task_id='cord_model_event_handler1',
     python_callable=DriverService_event,
-    cord_event_sensor_task_id='att_model_event_sensor1',
-    dag=dag_att
+    cord_event_sensor_task_id='cord_model_event_sensor1',
+    dag=dag_cord
 )
 
-att_model_event_sensor2 = CORDModelSensor(
-    task_id='att_model_event_sensor2',
-    model_name='AttWorkflowDriverServiceInstance',
+cord_model_event_sensor2 = CORDModelSensor(
+    task_id='cord_model_event_sensor2',
+    model_name='cordWorkflowDriverServiceInstance',
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att
+    dag=dag_cord
 )
 
-att_model_event_handler2 = CORDModelOperator(
-    task_id='att_model_event_handler2',
+cord_model_event_handler2 = CORDModelOperator(
+    task_id='cord_model_event_handler2',
     python_callable=DriverService_event,
-    cord_event_sensor_task_id='att_model_event_sensor2',
-    dag=dag_att
+    cord_event_sensor_task_id='cord_model_event_sensor2',
+    dag=dag_cord
 )
 
-att_model_event_sensor3 = CORDModelSensor(
-    task_id='att_model_event_sensor3',
-    model_name='AttWorkflowDriverServiceInstance',
+cord_model_event_sensor3 = CORDModelSensor(
+    task_id='cord_model_event_sensor3',
+    model_name='cordWorkflowDriverServiceInstance',
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_att
+    dag=dag_cord
 )
 
-att_model_event_handler3 = CORDModelOperator(
-    task_id='att_model_event_handler3',
+cord_model_event_handler3 = CORDModelOperator(
+    task_id='cord_model_event_handler3',
     python_callable=DriverService_event,
-    cord_event_sensor_task_id='att_model_event_sensor3',
-    dag=dag_att
+    cord_event_sensor_task_id='cord_model_event_sensor3',
+    dag=dag_cord
 )
 
 
-onu_event_sensor >> onu_event_handler >> att_model_event_sensor1 >> att_model_event_handler1 >> \
-    auth_event_sensor >> auth_event_handler >> att_model_event_sensor2 >> att_model_event_handler2 >> \
-    dhcp_event_sensor >> dhcp_event_handler >> att_model_event_sensor3 >> att_model_event_handler3
+onu_event_sensor >> onu_event_handler >> cord_model_event_sensor1 >> cord_model_event_handler1 >> \
+    auth_event_sensor >> auth_event_handler >> cord_model_event_sensor2 >> cord_model_event_handler2 >> \
+    dhcp_event_sensor >> dhcp_event_handler >> cord_model_event_sensor3 >> cord_model_event_handler3

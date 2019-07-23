@@ -15,7 +15,7 @@
 from __future__ import absolute_import
 import unittest
 
-from cord_workflow_airflow_extensions.kickstarter import check_web_live
+from tools.kickstarter import check_web_live
 
 
 class TestKickstarter(unittest.TestCase):

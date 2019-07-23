@@ -611,7 +611,8 @@ def main(args):
             global progargs
             for k in progargs:
                 # overwrite
-                progargs[k] = config[k]
+                if k in config:
+                    progargs[k] = config[k]
 
     log = create_logger(progargs["logging"])
 

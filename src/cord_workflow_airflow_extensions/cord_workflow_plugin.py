@@ -65,13 +65,28 @@ class CORDWorkflowControllerHook(BaseHook):
             # find connection info from database or environment
             # ENV: AIRFLOW_CONN_CORD_CONTROLLER_DEFAULT
             connection_params = self.get_connection(self.controller_conn_id)
-            # connection_params have three fields
+            # 'connection_params' has following fields
+            # schema
             # host
+            # port
             # login - we don't use this yet
             # password - we don't use this yet
             try:
                 self.workflow_run_client = WorkflowRun(self.workflow_id, self.workflow_run_id)
-                self.workflow_run_client.connect(connection_params.host)
+                schema = connection_params.schema
+                if not schema:
+                    schema = 'http'
+
+                host = connection_params.host
+                if not host:
+                    host = 'localhost'
+
+                port = connection_params.port
+                if (not port) or (port <= 0):
+                    port = 3030
+
+                url = '%s://%s:%s' % (schema, host, port)
+                self.workflow_run_client.connect(url)
             except BaseException as ex:
                 raise CORDWorkflowControllerException(ex)
 
@@ -88,17 +103,6 @@ class CORDWorkflowControllerHook(BaseHook):
                 raise CORDWorkflowControllerException(ex)
 
         self.workflow_run_client = None
-
-    def update_status(self, task_id, status):
-        """
-        Update status of the workflow run.
-        'state' should be one of ['begin', 'end']
-        """
-        client = self.get_conn()
-        try:
-            return client.update_status(task_id, status)
-        except BaseException as ex:
-            raise CORDWorkflowControllerException(ex)
 
     def count_events(self):
         """
@@ -191,6 +195,8 @@ class CORDEventSensor(BaseSensorOperator):
             **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.log.debug('Initializing CORD EventSensor for topic %s' % topic)
+
         self.topic = topic
         self.key_field = key_field
         self.controller_conn_id = controller_conn_id
@@ -201,20 +207,20 @@ class CORDEventSensor(BaseSensorOperator):
         """
         Return connection hook.
         """
+        self.log.debug('Creating a hook for run_id %s' % context['dag_run'].run_id)
         return CORDWorkflowControllerHook(self.dag_id, context['dag_run'].run_id, self.controller_conn_id)
 
     def execute(self, context):
         """
         Overridden to allow messages to be passed to next tasks via XCOM
         """
+        self.log.debug('Executing a task %s for run_id %s' % (self.task_id, context['dag_run'].run_id))
+
         if self.hook is None:
             self.hook = self.__create_hook(context)
 
-        self.hook.update_status(self.task_id, 'begin')
-
         super().execute(context)
 
-        self.hook.update_status(self.task_id, 'end')
         self.hook.close_conn()
         self.hook = None
         return self.message
@@ -223,6 +229,7 @@ class CORDEventSensor(BaseSensorOperator):
         # we need to use notification to immediately react at event
         # https://github.com/apache/airflow/blob/master/airflow/sensors/base_sensor_operator.py#L122
         self.log.info('Poking : trying to fetch a message with a topic %s', self.topic)
+
         event = self.hook.fetch_event(self.task_id, self.topic)
         if event:
             self.message = event
@@ -244,7 +251,7 @@ class CORDModelSensor(CORDEventSensor):
             *args,
             **kwargs):
         topic = 'datamodel.%s' % model_name
-        super().__init__(topic=topic, *args, **kwargs)
+        super().__init__(topic=topic, key_field=key_field, controller_conn_id=controller_conn_id, *args, **kwargs)
 
 
 """
@@ -254,7 +261,7 @@ Airflow Plugin Definition
 
 # Defining the plugin class
 class CORD_Workflow_Airflow_Plugin(AirflowPlugin):
-    name = "CORD_Workflow_Airflow_Plugin"
+    name = "cord_workflow_plugin"
     operators = [CORDModelOperator]
     sensors = [CORDEventSensor, CORDModelSensor]
     hooks = [CORDWorkflowControllerHook]

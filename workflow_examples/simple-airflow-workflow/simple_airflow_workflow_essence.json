@@ -1,0 +1,129 @@
+{
+    "simple_airflow_workflow": {
+        "dag": {
+            "dag_id": "simple_airflow_workflow",
+            "local_variable": "dag"
+        },
+        "dependencies": {
+            "http_sensor": {
+                "children": [
+                    "python_operator"
+                ]
+            },
+            "python_operator": {
+                "parents": [
+                    "http_sensor"
+                ]
+            }
+        },
+        "tasks": {
+            "http_sensor": {
+                "class": "HttpSensor",
+                "dag": "dag",
+                "dag_id": "simple_airflow_workflow",
+                "endpoint": "https://www.google.com",
+                "http_conn_id": "http_default",
+                "local_variable": "sensor",
+                "poke_interval": 5,
+                "request_params": {
+                    "Dict": {
+                        "keys": [],
+                        "values": []
+                    }
+                },
+                "response_check": {
+                    "Lambda": {
+                        "args": {
+                            "arguments": {
+                                "args": [
+                                    {
+                                        "arg": {
+                                            "annotation": null,
+                                            "arg": "response"
+                                        }
+                                    }
+                                ],
+                                "defaults": [],
+                                "kw_defaults": [],
+                                "kwarg": null,
+                                "kwonlyargs": [],
+                                "vararg": null
+                            }
+                        },
+                        "body": {
+                            "IfExp": {
+                                "body": {
+                                    "NameConstant": {
+                                        "value": true
+                                    }
+                                },
+                                "orelse": {
+                                    "NameConstant": {
+                                        "value": false
+                                    }
+                                },
+                                "test": {
+                                    "Compare": {
+                                        "comparators": [
+                                            {
+                                                "Num": {
+                                                    "n": 0
+                                                }
+                                            }
+                                        ],
+                                        "left": {
+                                            "Call": {
+                                                "args": [
+                                                    {
+                                                        "Call": {
+                                                            "args": [],
+                                                            "func": {
+                                                                "Attribute": {
+                                                                    "attr": "json",
+                                                                    "ctx": "Load",
+                                                                    "value": {
+                                                                        "Name": {
+                                                                            "ctx": "Load",
+                                                                            "id": "response"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "keywords": []
+                                                        }
+                                                    }
+                                                ],
+                                                "func": {
+                                                    "Name": {
+                                                        "ctx": "Load",
+                                                        "id": "len"
+                                                    }
+                                                },
+                                                "keywords": []
+                                            }
+                                        },
+                                        "ops": [
+                                            {
+                                                "Eq": {}
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "task_id": "http_sensor"
+            },
+            "python_operator": {
+                "class": "PythonOperator",
+                "dag": "dag",
+                "dag_id": "simple_airflow_workflow",
+                "local_variable": "handler",
+                "provide_context": true,
+                "python_callable": "handler",
+                "task_id": "python_operator"
+            }
+        }
+    }
+}
