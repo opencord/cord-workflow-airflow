@@ -1,0 +1,177 @@
+{
+    "parallel_cord_workflow": {
+        "dag": {
+            "dag_id": "parallel_cord_workflow",
+            "local_variable": "dag_parallel_cord"
+        },
+        "dependencies": {
+            "auth_event_handler": {
+                "children": [
+                    "join"
+                ],
+                "parents": [
+                    "auth_event_sensor"
+                ]
+            },
+            "auth_event_sensor": {
+                "children": [
+                    "auth_event_handler"
+                ]
+            },
+            "dhcp_event_handler": {
+                "children": [
+                    "join"
+                ],
+                "parents": [
+                    "dhcp_event_sensor"
+                ]
+            },
+            "dhcp_event_sensor": {
+                "children": [
+                    "dhcp_event_handler"
+                ]
+            },
+            "join": {
+                "parents": [
+                    "onu_event_handler",
+                    "auth_event_handler",
+                    "dhcp_event_handler"
+                ]
+            },
+            "onu_event_handler": {
+                "children": [
+                    "join"
+                ],
+                "parents": [
+                    "onu_event_sensor"
+                ]
+            },
+            "onu_event_sensor": {
+                "children": [
+                    "onu_event_handler"
+                ]
+            }
+        },
+        "tasks": {
+            "auth_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "auth_event_sensor",
+                "dag": "dag_parallel_cord",
+                "dag_id": "parallel_cord_workflow",
+                "local_variable": "auth_event_handler",
+                "python_callable": "on_auth_event",
+                "task_id": "auth_event_handler"
+            },
+            "auth_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_parallel_cord",
+                "dag_id": "parallel_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "auth_event_sensor",
+                "poke_interval": 5,
+                "task_id": "auth_event_sensor",
+                "topic": "authentication.events"
+            },
+            "dhcp_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "dhcp_event_sensor",
+                "dag": "dag_parallel_cord",
+                "dag_id": "parallel_cord_workflow",
+                "local_variable": "dhcp_event_handler",
+                "python_callable": "on_dhcp_event",
+                "task_id": "dhcp_event_handler"
+            },
+            "dhcp_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_parallel_cord",
+                "dag_id": "parallel_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "dhcp_event_sensor",
+                "poke_interval": 5,
+                "task_id": "dhcp_event_sensor",
+                "topic": "dhcp.events"
+            },
+            "join": {
+                "class": "DummyOperator",
+                "dag": "dag_parallel_cord",
+                "dag_id": "parallel_cord_workflow",
+                "local_variable": "join",
+                "task_id": "join",
+                "trigger_rule": {
+                    "Attribute": {
+                        "attr": "ALL_DONE",
+                        "ctx": "Load",
+                        "value": {
+                            "Name": {
+                                "ctx": "Load",
+                                "id": "TriggerRule"
+                            }
+                        }
+                    }
+                }
+            },
+            "onu_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "onu_event_sensor",
+                "dag": "dag_parallel_cord",
+                "dag_id": "parallel_cord_workflow",
+                "local_variable": "onu_event_handler",
+                "python_callable": "on_onu_event",
+                "task_id": "onu_event_handler"
+            },
+            "onu_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_parallel_cord",
+                "dag_id": "parallel_cord_workflow",
+                "key_field": "serialNumber",
+                "local_variable": "onu_event_sensor",
+                "poke_interval": 5,
+                "task_id": "onu_event_sensor",
+                "topic": "onu.events"
+            }
+        }
+    },
+    "parallel_cord_workflow_admin": {
+        "dag": {
+            "dag_id": "parallel_cord_workflow_admin",
+            "local_variable": "dag_parallel_cord_admin"
+        },
+        "dependencies": {
+            "att_model_event_handler": {
+                "parents": [
+                    "att_model_event_sensor"
+                ]
+            },
+            "att_model_event_sensor": {
+                "children": [
+                    "att_model_event_handler"
+                ]
+            }
+        },
+        "tasks": {
+            "att_model_event_handler": {
+                "class": "CORDModelOperator",
+                "cord_event_sensor_task_id": "att_model_event_sensor",
+                "dag": "dag_parallel_cord_admin",
+                "dag_id": "parallel_cord_workflow_admin",
+                "local_variable": "att_model_event_handler",
+                "python_callable": "on_model_event",
+                "task_id": "att_model_event_handler"
+            },
+            "att_model_event_sensor": {
+                "class": "CORDModelSensor",
+                "controller_conn_id": "local_cord_controller",
+                "dag": "dag_parallel_cord_admin",
+                "dag_id": "parallel_cord_workflow_admin",
+                "key_field": "serialNumber",
+                "local_variable": "att_model_event_sensor",
+                "model_name": "AttWorkflowDriverServiceInstance",
+                "poke_interval": 5,
+                "task_id": "att_model_event_sensor"
+            }
+        }
+    }
+}

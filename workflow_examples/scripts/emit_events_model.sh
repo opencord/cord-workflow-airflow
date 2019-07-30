@@ -14,6 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# register essence
-python ./workflow_ctl.py reg ./simple_cord_workflow_essence.json
-python ./workflow_ctl.py reg ./simple_airflow_workflow_essence.json
+# emit events
+python ../workflow_ctl.py emit "datamodel.cordWorkflowDriverServiceInstance" "{'event_type': 'update', 'serialNumber': 'testSerialXXX', 'other': 'test_other_field'}"

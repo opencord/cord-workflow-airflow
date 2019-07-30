@@ -1,3 +1,5 @@
+#! /bin/bash
+
 # Copyright 2019-present Open Networking Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,3 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# register essence
+python ../workflow_ctl.py reg ../sequential_cord_workflow_essence.json
+python ../workflow_ctl.py reg ../parallel_cord_workflow_essence.json
+python ../workflow_ctl.py reg ../simple_airflow_workflow_essence.json
+python ../workflow_ctl.py reg ../att_workflow_essence.json

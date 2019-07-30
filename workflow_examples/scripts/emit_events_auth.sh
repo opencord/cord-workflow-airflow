@@ -15,4 +15,4 @@
 # limitations under the License.
 
 # emit events
-python ./workflow_ctl.py emit "onu.events" "{'serialNumber': 'testSerialXXX', 'other': 'test_other_field'}"
+python ../workflow_ctl.py emit "authentication.events" "{'serialNumber': 'testSerialXXX', 'other': 'test_other_field'}"

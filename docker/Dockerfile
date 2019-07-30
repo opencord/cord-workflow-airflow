@@ -111,17 +111,22 @@ RUN pip install multistructlog~=2.1.0 \
 # drop plugin code to plugin dir of airflow
 COPY ./src/cord_workflow_airflow_extensions/cord_workflow_plugin.py ${AIRFLOW_HOME}/plugins/cord_workflow_plugin.py
 
+# make xosapi directory
+RUN mkdir -p /var/run/xosapi \
+    && chmod a+rwx /var/run/xosapi
+
 # drop sample workflow code to dags dir of airflow
-COPY ./workflow_examples/simple-cord-workflow/simple_cord_workflow.py ${AIRFLOW_HOME}/dags/simple_cord_workflow.py
-COPY ./workflow_examples/simple-cord-workflow/simple_cord_workflow_essence.json ${HOME}/simple_cord_workflow_essence.json
+COPY ./workflow_examples/sequential-cord-workflow/sequential_cord_workflow.py ${AIRFLOW_HOME}/dags/sequential_cord_workflow.py
+COPY ./workflow_examples/sequential-cord-workflow/sequential_cord_workflow_essence.json ${HOME}/sequential_cord_workflow_essence.json
+COPY ./workflow_examples/parallel-cord-workflow/parallel_cord_workflow.py ${AIRFLOW_HOME}/dags/parallel_cord_workflow.py
+COPY ./workflow_examples/parallel-cord-workflow/parallel_cord_workflow_essence.json ${HOME}/parallel_cord_workflow_essence.json
+COPY ./workflow_examples/att-workflow/att_workflow.py ${AIRFLOW_HOME}/dags/att_workflow.py
+COPY ./workflow_examples/att-workflow/att_workflow_essence.json ${HOME}/att_workflow_essence.json
 COPY ./workflow_examples/simple-airflow-workflow/simple_airflow_workflow.py ${AIRFLOW_HOME}/dags/simple_airflow_workflow.py
 COPY ./workflow_examples/simple-airflow-workflow/simple_airflow_workflow_essence.json ${HOME}/simple_airflow_workflow_essence.json
 
 # copy scripts
-COPY ./workflow_examples/connection_setup.sh ${HOME}/connection_setup.sh
-COPY ./workflow_examples/register_essence.sh ${HOME}/register_essence.sh
-COPY ./workflow_examples/emit_events_model.sh ${HOME}/emit_events_model.sh
-COPY ./workflow_examples/emit_events_onu.sh ${HOME}/emit_events_onu.sh
+COPY ./workflow_examples/scripts ${HOME}/scripts
 
 # copy kickstarter code & workflow ctl code
 COPY ./src/tools/kickstarter.py ${HOME}/kickstarter.py
@@ -131,10 +136,7 @@ COPY ./src/tools/workflow_ctl.py ${HOME}/workflow_ctl.py
 COPY ./src/tools/config.json /etc/cord_workflow_airflow_extensions/config.json
 
 RUN chown -R ${AIRFLOW_USER}:${AIRFLOW_USER} ${HOME} \
-    && chmod 755 ${HOME}/connection_setup.sh \
-    && chmod 755 ${HOME}/register_essence.sh \
-    && chmod 755 ${HOME}/emit_events_model.sh \
-    && chmod 755 ${HOME}/emit_events_onu.sh \
+    && chmod 755 -R ${HOME}/scripts \
     && chmod 755 ${HOME}/kickstarter.py \
     && chmod 755 ${HOME}/workflow_ctl.py
 

@@ -27,13 +27,13 @@ services:
             - "5432:5432"
 
     controller:
-        image: opencord/cord-workflow-controller:0.5.0
+        image: opencord/cord-workflow-controller:0.5.2
         ports:
             - "3030:3030"
 
     airflow:
         # image: opencord/cord-workflow-airflow
-        image: cord-workflow-airflow:0.5.0
+        image: cord-workflow-airflow:0.5.1
         restart: always
         depends_on:
             - postgres

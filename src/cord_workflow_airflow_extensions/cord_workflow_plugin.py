@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from airflow.plugins_manager import AirflowPlugin
 from airflow.hooks.base_hook import BaseHook
 from airflow.operators.python_operator import PythonOperator
@@ -162,16 +163,42 @@ class CORDModelOperator(PythonOperator):
             *args,
             **kwargs)
         self.cord_event_sensor_task_id = cord_event_sensor_task_id
+        self.model_accessor = None
+
+    def create_model_accessor(self):
+        self.log.info("Creating model accessor...")
+        from xossynchronizer.modelaccessor import model_accessor
+        self.model_accessor = model_accessor
+
+    def wait_for_ready(self):
+        self.log.info("Waiting for model accessor to get ready...")
+        models_active = False
+        # wait = False
+        while not models_active:
+            try:
+                # variable is unused
+                _i = self.model_accessor.Site.objects.first()  # noqa: F841
+                models_active = True
+            except Exception as e:
+                self.log.info("Exception", e=e)
+                self.log.info("Waiting for data model to come up before starting...")
+                time.sleep(10)
+                # wait = True
+
+        # if wait:
+        #     # Safety factor, seeing that we stumbled waiting for the data model to come up.
+        #     time.sleep(60)
 
     def execute_callable(self):
-        # TODO
-        model_accessor = None
+        # temporarily comment out this two lines
+        # self.create_model_accessor()
+        # self.wait_for_ready()
 
         message = None
         if self.cord_event_sensor_task_id:
             message = self.op_kwargs['ti'].xcom_pull(task_ids=self.cord_event_sensor_task_id)
 
-        new_op_kwargs = dict(self.op_kwargs, model_accessor=model_accessor, message=message)
+        new_op_kwargs = dict(self.op_kwargs, model_accessor=self.model_accessor, message=message)
         return self.python_callable(*self.op_args, **new_op_kwargs)
 
 
