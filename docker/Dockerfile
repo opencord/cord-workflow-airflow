@@ -103,7 +103,7 @@ COPY ./docker/config/airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 
 # CORD Workflow
 RUN pip install multistructlog~=2.1.0 \
-    && pip install cord-workflow-controller-client~=0.3.0 \
+    && pip install cord-workflow-controller-client~=0.5.0 \
     && pip install pyfiglet~=0.7 \
     && pip install xossynchronizer~=3.2.6 \
     && pip install xosapi~=3.2.6

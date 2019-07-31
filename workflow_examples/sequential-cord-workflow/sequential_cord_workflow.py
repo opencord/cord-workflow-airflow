@@ -13,32 +13,40 @@
 # limitations under the License.
 
 """
-Example sequential workflow
+Example parallel workflow
 """
-
-
+import json
 import logging
 from datetime import datetime
 from airflow import DAG
+from airflow import AirflowException
+from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.cord_workflow_plugin import CORDEventSensor, CORDModelSensor
 from airflow.operators.cord_workflow_plugin import CORDModelOperator
 
 
 log = logging.getLogger(__name__)
-
 args = {
     # hard coded date
     'start_date': datetime(2019, 1, 1),
     'owner': 'iychoi'
 }
 
-dag_sequential_cord = DAG(
-    dag_id='sequential_cord_workflow',
+dag_parallel_cord = DAG(
+    dag_id='parallel_cord_workflow',
     default_args=args,
     # this dag will be triggered by external systems
     schedule_interval=None
 )
-dag_sequential_cord.doc_md = __doc__
+dag_parallel_cord.doc_md = __doc__
+
+dag_parallel_cord_admin = DAG(
+    dag_id='parallel_cord_workflow_admin',
+    default_args=args,
+    # this dag will be triggered by external systems
+    schedule_interval=None
+)
+dag_parallel_cord_admin.doc_md = __doc__
 
 
 def on_onu_event(model_accessor, message, **kwargs):
@@ -63,14 +71,14 @@ onu_event_sensor = CORDEventSensor(
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_sequential_cord
+    dag=dag_parallel_cord
 )
 
 onu_event_handler = CORDModelOperator(
     task_id='onu_event_handler',
     python_callable=on_onu_event,
     cord_event_sensor_task_id='onu_event_sensor',
-    dag=dag_sequential_cord
+    dag=dag_parallel_cord
 )
 
 auth_event_sensor = CORDEventSensor(
@@ -79,14 +87,14 @@ auth_event_sensor = CORDEventSensor(
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_sequential_cord
+    dag=dag_parallel_cord
 )
 
 auth_event_handler = CORDModelOperator(
     task_id='auth_event_handler',
     python_callable=on_auth_event,
     cord_event_sensor_task_id='auth_event_sensor',
-    dag=dag_sequential_cord
+    dag=dag_parallel_cord
 )
 
 dhcp_event_sensor = CORDEventSensor(
@@ -95,64 +103,34 @@ dhcp_event_sensor = CORDEventSensor(
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_sequential_cord
+    dag=dag_parallel_cord
 )
 
 dhcp_event_handler = CORDModelOperator(
     task_id='dhcp_event_handler',
     python_callable=on_dhcp_event,
     cord_event_sensor_task_id='dhcp_event_sensor',
-    dag=dag_sequential_cord
+    dag=dag_parallel_cord
 )
 
-cord_model_event_sensor1 = CORDModelSensor(
-    task_id='cord_model_event_sensor1',
-    model_name='cordWorkflowDriverServiceInstance',
+att_model_event_sensor = CORDModelSensor(
+    task_id='att_model_event_sensor',
+    model_name='AttWorkflowDriverServiceInstance',
     key_field='serialNumber',
     controller_conn_id='local_cord_controller',
     poke_interval=5,
-    dag=dag_sequential_cord
+    dag=dag_parallel_cord_admin
 )
 
-cord_model_event_handler1 = CORDModelOperator(
-    task_id='cord_model_event_handler1',
+att_model_event_handler = CORDModelOperator(
+    task_id='att_model_event_handler',
     python_callable=on_model_event,
-    cord_event_sensor_task_id='cord_model_event_sensor1',
-    dag=dag_sequential_cord
+    cord_event_sensor_task_id='att_model_event_sensor',
+    dag=dag_parallel_cord_admin
 )
 
-cord_model_event_sensor2 = CORDModelSensor(
-    task_id='cord_model_event_sensor2',
-    model_name='cordWorkflowDriverServiceInstance',
-    key_field='serialNumber',
-    controller_conn_id='local_cord_controller',
-    poke_interval=5,
-    dag=dag_sequential_cord
-)
+# handle standard flow
+onu_event_sensor >> onu_event_handler >> auth_event_sensor >> auth_event_handler >> dhcp_event_sensor >> dhcp_event_handler
+# handle admin flow
+att_model_event_sensor >> att_model_event_handler
 
-cord_model_event_handler2 = CORDModelOperator(
-    task_id='cord_model_event_handler2',
-    python_callable=on_model_event,
-    cord_event_sensor_task_id='cord_model_event_sensor2',
-    dag=dag_sequential_cord
-)
-
-cord_model_event_sensor3 = CORDModelSensor(
-    task_id='cord_model_event_sensor3',
-    model_name='cordWorkflowDriverServiceInstance',
-    key_field='serialNumber',
-    controller_conn_id='local_cord_controller',
-    poke_interval=5,
-    dag=dag_sequential_cord
-)
-
-cord_model_event_handler3 = CORDModelOperator(
-    task_id='cord_model_event_handler3',
-    python_callable=on_model_event,
-    cord_event_sensor_task_id='cord_model_event_sensor3',
-    dag=dag_sequential_cord
-)
-
-onu_event_sensor >> onu_event_handler >> cord_model_event_sensor1 >> cord_model_event_handler1 >> \
-    auth_event_sensor >> auth_event_handler >> cord_model_event_sensor2 >> cord_model_event_handler2 >> \
-    dhcp_event_sensor >> dhcp_event_handler >> cord_model_event_sensor3 >> cord_model_event_handler3

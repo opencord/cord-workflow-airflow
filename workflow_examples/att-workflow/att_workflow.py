@@ -21,8 +21,6 @@ from datetime import datetime
 from airflow import DAG
 from airflow import AirflowException
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.utils.trigger_rule import TriggerRule
 from airflow.sensors.cord_workflow_plugin import CORDEventSensor, CORDModelSensor
 from airflow.operators.cord_workflow_plugin import CORDModelOperator
 
@@ -430,12 +428,6 @@ dhcp_event_handler = CORDModelOperator(
     dag=dag_att
 )
 
-join = DummyOperator(
-    task_id='join',
-    trigger_rule=TriggerRule.ALL_DONE,
-    dag=dag_att
-)
-
 att_model_event_sensor = CORDModelSensor(
     task_id='att_model_event_sensor',
     model_name='AttWorkflowDriverServiceInstance',
@@ -453,9 +445,7 @@ att_model_event_handler = CORDModelOperator(
 )
 
 # handle standard flow
-onu_event_sensor >> onu_event_handler >> join
-auth_event_sensor >> auth_event_handler >> join
-dhcp_event_sensor >> dhcp_event_handler >> join
+onu_event_sensor >> onu_event_handler >> auth_event_sensor >> auth_event_handler >> dhcp_event_sensor >> dhcp_event_handler
 
 # handle admin flow
 att_model_event_sensor >> att_model_event_handler
