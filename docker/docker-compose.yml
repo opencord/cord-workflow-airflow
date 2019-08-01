@@ -33,7 +33,7 @@ services:
 
     airflow:
         # image: opencord/cord-workflow-airflow
-        image: cord-workflow-airflow:0.5.2
+        image: opencord/cord-workflow-airflow:0.5.3
         restart: always
         depends_on:
             - postgres

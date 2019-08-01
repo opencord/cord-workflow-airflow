@@ -23,6 +23,7 @@ from airflow import AirflowException
 from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.cord_workflow_plugin import CORDEventSensor, CORDModelSensor
 from airflow.operators.cord_workflow_plugin import CORDModelOperator
+from xossynchronizer.steps.syncstep import DeferredException
 
 log = logging.getLogger(__name__)
 args = {

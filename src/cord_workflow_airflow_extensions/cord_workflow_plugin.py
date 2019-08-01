@@ -190,7 +190,8 @@ class CORDModelOperator(PythonOperator):
         #     time.sleep(60)
 
     def execute_callable(self):
-        # temporarily comment out this two lines
+        # TODO:  NEED TO UNCOMMENT BELOW TWO LINES AFTER XOS_API CONFIGURATION
+        # comment out this two lines
         # self.create_model_accessor()
         # self.wait_for_ready()
 
